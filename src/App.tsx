@@ -32,41 +32,107 @@ import {
   isCloudQuotaExceeded
 } from './firebase';
 
+const getUniqueProducts = (arr: Product[]): Product[] => {
+  if (!Array.isArray(arr)) return [];
+  const seen = new Set<string>();
+  return arr.filter(p => {
+    if (!p || !p.id) return false;
+    const isDuplicate = seen.has(p.id);
+    seen.add(p.id);
+    return !isDuplicate;
+  });
+};
+
+const getUniqueBrands = (arr: BrandInfo[]): BrandInfo[] => {
+  if (!Array.isArray(arr)) return [];
+  const seen = new Set<string>();
+  return arr.filter(b => {
+    if (!b || !b.name) return false;
+    const nameLower = b.name.toLowerCase().trim();
+    const isDuplicate = seen.has(nameLower);
+    seen.add(nameLower);
+    return !isDuplicate;
+  });
+};
+
+const getUniqueCategories = (arr: CategoryInfo[]): CategoryInfo[] => {
+  if (!Array.isArray(arr)) return [];
+  const seen = new Set<string>();
+  return arr.filter(c => {
+    if (!c || !c.id) return false;
+    const isDuplicate = seen.has(c.id);
+    seen.add(c.id);
+    return !isDuplicate;
+  });
+};
+
+const getUniqueKdvRates = (arr: number[]): number[] => {
+  if (!Array.isArray(arr)) return [];
+  return Array.from(new Set(arr));
+};
+
 export default function App() {
 
   // Catalog loaded from LocalStorage or Compiled Defaults for absolute persistence
-  const [products, setProducts] = useState<Product[]>(() => {
+  const [products, setProductsRaw] = useState<Product[]>(() => {
     try {
       const saved = localStorage.getItem('b2b_products_v4');
-      return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+      return saved ? getUniqueProducts(JSON.parse(saved)) : INITIAL_PRODUCTS;
     } catch {
       return INITIAL_PRODUCTS;
     }
   });
-  const [brands, setBrands] = useState<BrandInfo[]>(() => {
+  const setProducts = (val: React.SetStateAction<Product[]>) => {
+    setProductsRaw(prev => {
+      const resolved = typeof val === 'function' ? (val as Function)(prev) : val;
+      return getUniqueProducts(resolved);
+    });
+  };
+
+  const [brands, setBrandsRaw] = useState<BrandInfo[]>(() => {
     try {
       const saved = localStorage.getItem('b2b_brands_v4');
-      return saved ? JSON.parse(saved) : INITIAL_BRANDS;
+      return saved ? getUniqueBrands(JSON.parse(saved)) : INITIAL_BRANDS;
     } catch {
       return INITIAL_BRANDS;
     }
   });
-  const [categories, setCategories] = useState<CategoryInfo[]>(() => {
+  const setBrands = (val: React.SetStateAction<BrandInfo[]>) => {
+    setBrandsRaw(prev => {
+      const resolved = typeof val === 'function' ? (val as Function)(prev) : val;
+      return getUniqueBrands(resolved);
+    });
+  };
+
+  const [categories, setCategoriesRaw] = useState<CategoryInfo[]>(() => {
     try {
       const saved = localStorage.getItem('b2b_categories_v4');
-      return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
+      return saved ? getUniqueCategories(JSON.parse(saved)) : INITIAL_CATEGORIES;
     } catch {
       return INITIAL_CATEGORIES;
     }
   });
-  const [kdvRates, setKdvRates] = useState<number[]>(() => {
+  const setCategories = (val: React.SetStateAction<CategoryInfo[]>) => {
+    setCategoriesRaw(prev => {
+      const resolved = typeof val === 'function' ? (val as Function)(prev) : val;
+      return getUniqueCategories(resolved);
+    });
+  };
+
+  const [kdvRates, setKdvRatesRaw] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem('b2b_kdv_rates_v4');
-      return saved ? JSON.parse(saved) : INITIAL_KDV;
+      return saved ? getUniqueKdvRates(JSON.parse(saved)) : INITIAL_KDV;
     } catch {
       return INITIAL_KDV;
     }
   });
+  const setKdvRates = (val: React.SetStateAction<number[]>) => {
+    setKdvRatesRaw(prev => {
+      const resolved = typeof val === 'function' ? (val as Function)(prev) : val;
+      return getUniqueKdvRates(resolved);
+    });
+  };
   const [isCloudLoading, setIsCloudLoading] = useState<boolean>(true);
   const [localQuotaExceeded, setLocalQuotaExceeded] = useState<boolean>(isCloudQuotaExceeded);
 
