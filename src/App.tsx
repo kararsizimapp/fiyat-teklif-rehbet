@@ -163,7 +163,7 @@ export default function App() {
           console.warn("Failed to read disk backup, using compile time defaults:", e);
         }
 
-        // Determine fallback defaults (absolutely prioritize local storage first if it exists since it is 100% persistent across builds and restarts)
+        // Determine fallback defaults (absolutely prioritize server-side disk backup since it is the global shared authority)
         const localProds = localStorage.getItem('b2b_products_v4');
         const localBrands = localStorage.getItem('b2b_brands_v4');
         const localCats = localStorage.getItem('b2b_categories_v4');
@@ -174,21 +174,24 @@ export default function App() {
         let defaultCategories = CATEGORIES;
         let defaultKdv = [20, 10, 1, 0];
 
-        try {
-          if (localProds) defaultProducts = JSON.parse(localProds);
-          if (localBrands) defaultBrands = JSON.parse(localBrands);
-          if (localCats) defaultCategories = JSON.parse(localCats);
-          if (localKdv) defaultKdv = JSON.parse(localKdv);
-        } catch (e) {
-          console.warn("Error parsing localStorage cache:", e);
+        // 1. Prioritize Server-side custom disk backup data (user_data.json) if it exists
+        if (diskData) {
+          if (diskData.products && diskData.products.length > 0) defaultProducts = diskData.products;
+          if (diskData.brands && diskData.brands.length > 0) defaultBrands = diskData.brands;
+          if (diskData.categories && diskData.categories.length > 0) defaultCategories = diskData.categories;
+          if (diskData.kdvRates && diskData.kdvRates.length > 0) defaultKdv = diskData.kdvRates;
         }
 
-        // Overlay with container diskData as secondary authority if localStorage was completely empty/new
-        if (diskData) {
-          if (!localProds && diskData.products && diskData.products.length > 0) defaultProducts = diskData.products;
-          if (!localBrands && diskData.brands && diskData.brands.length > 0) defaultBrands = diskData.brands;
-          if (!localCats && diskData.categories && diskData.categories.length > 0) defaultCategories = diskData.categories;
-          if (!localKdv && diskData.kdvRates && diskData.kdvRates.length > 0) defaultKdv = diskData.kdvRates;
+        // 2. Fall back to local storage cache only if server backup is not available or new
+        try {
+          if (!diskData || !diskData.products || diskData.products.length === 0) {
+            if (localProds) defaultProducts = JSON.parse(localProds);
+            if (localBrands) defaultBrands = JSON.parse(localBrands);
+            if (localCats) defaultCategories = JSON.parse(localCats);
+            if (localKdv) defaultKdv = JSON.parse(localKdv);
+          }
+        } catch (e) {
+          console.warn("Error parsing localStorage cache:", e);
         }
 
         // Standardize base state with fallback priority first to minimize loading jumps
