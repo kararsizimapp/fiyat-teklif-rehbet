@@ -8,10 +8,18 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth();
 
-export let isCloudQuotaExceeded = true;
+export let isCloudQuotaExceeded = false;
 
 export const initAnonymousAuth = async (): Promise<string> => {
-  return "guest_user";
+  try {
+    const cred = await signInAnonymously(auth);
+    isCloudQuotaExceeded = false;
+    return cred.user.uid;
+  } catch (e) {
+    console.warn("Using local-only fallback due to connection or quota restrictions:", e);
+    isCloudQuotaExceeded = true;
+    return "guest_user";
+  }
 };
 
 export enum OperationType {

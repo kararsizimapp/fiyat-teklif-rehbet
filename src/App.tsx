@@ -76,7 +76,7 @@ export default function App() {
   // Catalog loaded from LocalStorage or Compiled Defaults for absolute persistence
   const [products, setProductsRaw] = useState<Product[]>(() => {
     try {
-      const saved = localStorage.getItem('b2b_products_v4');
+      const saved = localStorage.getItem('b2b_products_v5');
       return saved ? getUniqueProducts(JSON.parse(saved)) : INITIAL_PRODUCTS;
     } catch {
       return INITIAL_PRODUCTS;
@@ -91,7 +91,7 @@ export default function App() {
 
   const [brands, setBrandsRaw] = useState<BrandInfo[]>(() => {
     try {
-      const saved = localStorage.getItem('b2b_brands_v4');
+      const saved = localStorage.getItem('b2b_brands_v5');
       return saved ? getUniqueBrands(JSON.parse(saved)) : INITIAL_BRANDS;
     } catch {
       return INITIAL_BRANDS;
@@ -106,7 +106,7 @@ export default function App() {
 
   const [categories, setCategoriesRaw] = useState<CategoryInfo[]>(() => {
     try {
-      const saved = localStorage.getItem('b2b_categories_v4');
+      const saved = localStorage.getItem('b2b_categories_v5');
       return saved ? getUniqueCategories(JSON.parse(saved)) : INITIAL_CATEGORIES;
     } catch {
       return INITIAL_CATEGORIES;
@@ -121,7 +121,7 @@ export default function App() {
 
   const [kdvRates, setKdvRatesRaw] = useState<number[]>(() => {
     try {
-      const saved = localStorage.getItem('b2b_kdv_rates_v4');
+      const saved = localStorage.getItem('b2b_kdv_rates_v5');
       return saved ? getUniqueKdvRates(JSON.parse(saved)) : INITIAL_KDV;
     } catch {
       return INITIAL_KDV;
@@ -154,7 +154,7 @@ export default function App() {
   useEffect(() => {
     try {
       if (products && products.length > 0) {
-        localStorage.setItem('b2b_products_v4', JSON.stringify(products));
+        localStorage.setItem('b2b_products_v5', JSON.stringify(products));
       }
     } catch (e) {
       console.warn("Failed to save products to localStorage:", e);
@@ -164,7 +164,7 @@ export default function App() {
   useEffect(() => {
     try {
       if (brands && brands.length > 0) {
-        localStorage.setItem('b2b_brands_v4', JSON.stringify(brands));
+        localStorage.setItem('b2b_brands_v5', JSON.stringify(brands));
       }
     } catch (e) {
       console.warn("Failed to save brands to localStorage:", e);
@@ -174,7 +174,7 @@ export default function App() {
   useEffect(() => {
     try {
       if (categories && categories.length > 0) {
-        localStorage.setItem('b2b_categories_v4', JSON.stringify(categories));
+        localStorage.setItem('b2b_categories_v5', JSON.stringify(categories));
       }
     } catch (e) {
       console.warn("Failed to save categories to localStorage:", e);
@@ -184,7 +184,7 @@ export default function App() {
   useEffect(() => {
     try {
       if (kdvRates && kdvRates.length > 0) {
-        localStorage.setItem('b2b_kdv_rates_v4', JSON.stringify(kdvRates));
+        localStorage.setItem('b2b_kdv_rates_v5', JSON.stringify(kdvRates));
       }
     } catch (e) {
       console.warn("Failed to save kdvRates to localStorage:", e);
@@ -235,10 +235,10 @@ export default function App() {
         }
 
         // Determine fallback defaults (absolutely prioritize server-side disk backup since it is the global shared authority)
-        const localProds = localStorage.getItem('b2b_products_v4');
-        const localBrands = localStorage.getItem('b2b_brands_v4');
-        const localCats = localStorage.getItem('b2b_categories_v4');
-        const localKdv = localStorage.getItem('b2b_kdv_rates_v4');
+        const localProds = localStorage.getItem('b2b_products_v5');
+        const localBrands = localStorage.getItem('b2b_brands_v5');
+        const localCats = localStorage.getItem('b2b_categories_v5');
+        const localKdv = localStorage.getItem('b2b_kdv_rates_v5');
 
         let defaultProducts: Product[] = [];
         let defaultBrands: BrandInfo[] = [];
@@ -310,12 +310,12 @@ export default function App() {
         } else if (dbProducts.length > 0) {
           // Firebase Firestore is active and has items. Trust it as the single, absolute source of truth!
           setProducts(dbProducts);
-          localStorage.setItem('b2b_products_v4', JSON.stringify(dbProducts));
+          localStorage.setItem('b2b_products_v5', JSON.stringify(dbProducts));
           
           const dbBrands = await fetchBrands();
           if (dbBrands && dbBrands.length > 0) {
             setBrands(dbBrands);
-            localStorage.setItem('b2b_brands_v4', JSON.stringify(dbBrands));
+            localStorage.setItem('b2b_brands_v5', JSON.stringify(dbBrands));
           } else if (dbBrands !== null) {
             setBrands(defaultBrands);
             await syncBrandsInCloud(defaultBrands);
@@ -324,7 +324,7 @@ export default function App() {
           const dbCategories = await fetchCategories();
           if (dbCategories && dbCategories.length > 0) {
             setCategories(dbCategories);
-            localStorage.setItem('b2b_categories_v4', JSON.stringify(dbCategories));
+            localStorage.setItem('b2b_categories_v5', JSON.stringify(dbCategories));
           } else if (dbCategories !== null) {
             setCategories(defaultCategories);
             await syncCategoriesInCloud(defaultCategories);
@@ -334,7 +334,7 @@ export default function App() {
           if (dbKdv && dbKdv.length > 0) {
             const sortedKdv = dbKdv.sort((a, b) => b - a);
             setKdvRates(sortedKdv);
-            localStorage.setItem('b2b_kdv_rates_v4', JSON.stringify(sortedKdv));
+            localStorage.setItem('b2b_kdv_rates_v5', JSON.stringify(sortedKdv));
           } else if (dbKdv !== null) {
             setKdvRates(defaultKdv);
             await syncKdvRatesInCloud(defaultKdv);
@@ -1103,6 +1103,10 @@ export default function App() {
           saveDiskBackup(products, brands, categories, newKdvRates);
         }}
         onResetToDefaults={() => {
+          localStorage.removeItem('b2b_products_v5');
+          localStorage.removeItem('b2b_brands_v5');
+          localStorage.removeItem('b2b_categories_v5');
+          localStorage.removeItem('b2b_kdv_rates_v5');
           setProducts(INITIAL_PRODUCTS);
           setBrands(INITIAL_BRANDS);
           setCategories(INITIAL_CATEGORIES);

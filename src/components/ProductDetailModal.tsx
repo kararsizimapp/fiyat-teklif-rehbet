@@ -326,12 +326,12 @@ export function ProductDetailModal({ product, selectedSelections, categories, br
                     Yaka Stili Seçiniz
                   </h3>
                   <div className="grid grid-cols-4 gap-1 md:gap-1.5" id="detail-collar-grid">
-                    {collarList.map((item) => {
+                    {collarList.map((item, idx) => {
                       const isSelected = selectedCollar === item.name;
                       
                       return (
                         <button
-                          key={item.name}
+                          key={`${item.name || idx}-${idx}`}
                           type="button"
                           onClick={() => setSelectedCollar(item.name)}
                           className={`relative flex flex-col justify-center items-center p-1 md:p-1.5 rounded-xl text-center transition-all cursor-pointer focus:outline-hidden min-h-[44px] border ${
@@ -371,15 +371,15 @@ export function ProductDetailModal({ product, selectedSelections, categories, br
                     Yapılandırma Seçenekleri
                   </h3>
                   <div className="space-y-2 md:space-y-3 bg-white p-3 rounded-2xl border border-slate-200/55 shadow-3xs">
-                    {product.options.map((opt) => (
-                      <div key={opt.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-100 last:border-0 pb-2 last:pb-0">
+                    {product.options.map((opt, optIdx) => (
+                      <div key={opt.id || optIdx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-100 last:border-0 pb-2 last:pb-0">
                         <span className="text-[9.5px] md:text-[10.5px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0">{opt.name}:</span>
                         <div className="flex flex-wrap gap-1">
-                          {(opt.choices || []).map((choice) => {
+                          {(opt.choices || []).map((choice, choiceIdx) => {
                             const isSelected = localSelections[opt.id] === choice.name;
                             return (
                               <button
-                                key={choice.name}
+                                key={`${choice.name}-${choiceIdx}`}
                                 type="button"
                                 onClick={() => setLocalSelections(prev => ({ ...prev, [opt.id]: choice.name }))}
                                 className={`text-[9.5px] md:text-[10.5px] font-black px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${

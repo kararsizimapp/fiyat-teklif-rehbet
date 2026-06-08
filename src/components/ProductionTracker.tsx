@@ -149,7 +149,7 @@ const SALES_REPS = [
 export function ProductionTracker() {
   const [sheetRows, setSheetRows] = useState<SheetRow[]>(() => {
     try {
-      const saved = localStorage.getItem('tracker_sheet_rows_v4');
+      const saved = localStorage.getItem('tracker_sheet_rows_v5');
       return saved ? JSON.parse(saved) : INITIAL_SHEET_ROWS;
     } catch {
       return INITIAL_SHEET_ROWS;
@@ -157,7 +157,7 @@ export function ProductionTracker() {
   });
 
   const [activeRepEmail, setActiveRepEmail] = useState<string>('mustafacanaygun55@gmail.com');
-  const [sheetUrl, setSheetUrl] = useState<string>('https://docs.google.com/spreadsheets/d/1xHummelTeamwear_B2B_Production_Track_v4_mustafa55/edit');
+  const [sheetUrl, setSheetUrl] = useState<string>('https://docs.google.com/spreadsheets/d/1xHummelTeamwear_B2B_Production_Track_v5_mustafa55/edit');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncLogs, setSyncLogs] = useState<string>('Grup yetkilendirmesi hazır. Google Sheets bağlantısı kuruldu.');
   
@@ -177,7 +177,7 @@ export function ProductionTracker() {
   // Live Tracking Notifications State and Settings
   const [notifications, setNotifications] = useState<TrackerNotification[]>(() => {
     try {
-      const saved = localStorage.getItem('tracker_notifications_v4');
+      const saved = localStorage.getItem('tracker_notifications_v5');
       return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
     } catch {
       return INITIAL_NOTIFICATIONS;
@@ -206,7 +206,7 @@ export function ProductionTracker() {
   // Backup state to local storage when changed
   useEffect(() => {
     try {
-      localStorage.setItem('tracker_sheet_rows_v4', JSON.stringify(sheetRows));
+      localStorage.setItem('tracker_sheet_rows_v5', JSON.stringify(sheetRows));
     } catch (e) {
       console.warn('Failed to backup sheet rows locally', e);
     }
@@ -214,7 +214,7 @@ export function ProductionTracker() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('tracker_notifications_v4', JSON.stringify(notifications));
+      localStorage.setItem('tracker_notifications_v5', JSON.stringify(notifications));
     } catch (e) {
       console.warn('Failed to backup notifications locally', e);
     }
