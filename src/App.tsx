@@ -28,12 +28,81 @@ import {
 
 export default function App() {
 
-  // Catalog loaded from Firestore Cloud Database
-  const [products, setProducts] = useState<Product[]>(PRODUCTS);
-  const [brands, setBrands] = useState<BrandInfo[]>(BRANDS);
-  const [categories, setCategories] = useState<CategoryInfo[]>(CATEGORIES);
-  const [kdvRates, setKdvRates] = useState<number[]>([20, 10, 1, 0]);
+  // Catalog loaded from LocalStorage or Compiled Defaults for absolute persistence
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const saved = localStorage.getItem('b2b_products_v4');
+      return saved ? JSON.parse(saved) : PRODUCTS;
+    } catch {
+      return PRODUCTS;
+    }
+  });
+  const [brands, setBrands] = useState<BrandInfo[]>(() => {
+    try {
+      const saved = localStorage.getItem('b2b_brands_v4');
+      return saved ? JSON.parse(saved) : BRANDS;
+    } catch {
+      return BRANDS;
+    }
+  });
+  const [categories, setCategories] = useState<CategoryInfo[]>(() => {
+    try {
+      const saved = localStorage.getItem('b2b_categories_v4');
+      return saved ? JSON.parse(saved) : CATEGORIES;
+    } catch {
+      return CATEGORIES;
+    }
+  });
+  const [kdvRates, setKdvRates] = useState<number[]>(() => {
+    try {
+      const saved = localStorage.getItem('b2b_kdv_rates_v4');
+      return saved ? JSON.parse(saved) : [20, 10, 1, 0];
+    } catch {
+      return [20, 10, 1, 0];
+    }
+  });
   const [isCloudLoading, setIsCloudLoading] = useState<boolean>(true);
+
+  // Synchronize state with LocalStorage for ultra-robust client-side survival
+  useEffect(() => {
+    try {
+      if (products && products.length > 0) {
+        localStorage.setItem('b2b_products_v4', JSON.stringify(products));
+      }
+    } catch (e) {
+      console.warn("Failed to save products to localStorage:", e);
+    }
+  }, [products]);
+
+  useEffect(() => {
+    try {
+      if (brands && brands.length > 0) {
+        localStorage.setItem('b2b_brands_v4', JSON.stringify(brands));
+      }
+    } catch (e) {
+      console.warn("Failed to save brands to localStorage:", e);
+    }
+  }, [brands]);
+
+  useEffect(() => {
+    try {
+      if (categories && categories.length > 0) {
+        localStorage.setItem('b2b_categories_v4', JSON.stringify(categories));
+      }
+    } catch (e) {
+      console.warn("Failed to save categories to localStorage:", e);
+    }
+  }, [categories]);
+
+  useEffect(() => {
+    try {
+      if (kdvRates && kdvRates.length > 0) {
+        localStorage.setItem('b2b_kdv_rates_v4', JSON.stringify(kdvRates));
+      }
+    } catch (e) {
+      console.warn("Failed to save kdvRates to localStorage:", e);
+    }
+  }, [kdvRates]);
 
   // Helper to save server-side container disk backup so data is preserved even on database resets
   const saveDiskBackup = async (
@@ -78,13 +147,35 @@ export default function App() {
           console.warn("Failed to read disk backup, using compile time defaults:", e);
         }
 
-        // Determine fallback defaults (always prioritize custom products in user_data.json on disk)
-        const defaultProducts = (diskData && diskData.products && diskData.products.length > 0) ? diskData.products : PRODUCTS;
-        const defaultBrands = (diskData && diskData.brands && diskData.brands.length > 0) ? diskData.brands : BRANDS;
-        const defaultCategories = (diskData && diskData.categories && diskData.categories.length > 0) ? diskData.categories : CATEGORIES;
-        const defaultKdv = (diskData && diskData.kdvRates && diskData.kdvRates.length > 0) ? diskData.kdvRates : [20, 10, 1, 0];
+        // Determine fallback defaults (absolutely prioritize local storage first if it exists since it is 100% persistent across builds and restarts)
+        const localProds = localStorage.getItem('b2b_products_v4');
+        const localBrands = localStorage.getItem('b2b_brands_v4');
+        const localCats = localStorage.getItem('b2b_categories_v4');
+        const localKdv = localStorage.getItem('b2b_kdv_rates_v4');
 
-        // Standardize base state with disk backup first to minimize loading jumps
+        let defaultProducts = PRODUCTS;
+        let defaultBrands = BRANDS;
+        let defaultCategories = CATEGORIES;
+        let defaultKdv = [20, 10, 1, 0];
+
+        try {
+          if (localProds) defaultProducts = JSON.parse(localProds);
+          if (localBrands) defaultBrands = JSON.parse(localBrands);
+          if (localCats) defaultCategories = JSON.parse(localCats);
+          if (localKdv) defaultKdv = JSON.parse(localKdv);
+        } catch (e) {
+          console.warn("Error parsing localStorage cache:", e);
+        }
+
+        // Overlay with container diskData as secondary authority if localStorage was completely empty/new
+        if (diskData) {
+          if (!localProds && diskData.products && diskData.products.length > 0) defaultProducts = diskData.products;
+          if (!localBrands && diskData.brands && diskData.brands.length > 0) defaultBrands = diskData.brands;
+          if (!localCats && diskData.categories && diskData.categories.length > 0) defaultCategories = diskData.categories;
+          if (!localKdv && diskData.kdvRates && diskData.kdvRates.length > 0) defaultKdv = diskData.kdvRates;
+        }
+
+        // Standardize base state with fallback priority first to minimize loading jumps
         setProducts(defaultProducts);
         setBrands(defaultBrands);
         setCategories(defaultCategories);
@@ -92,13 +183,17 @@ export default function App() {
 
         // 2. Fetch from Firebase Firestore
         const dbProducts = await fetchProducts();
-        if (dbProducts && dbProducts.length > 0) {
+        if (dbProducts === null) {
+          console.warn("Firestore system is in quota exceeded or local fallback state. Skipping database seeding.");
+        } else if (dbProducts.length > 0) {
           setProducts(dbProducts);
+          localStorage.setItem('b2b_products_v4', JSON.stringify(dbProducts));
           
           const dbBrands = await fetchBrands();
           if (dbBrands && dbBrands.length > 0) {
             setBrands(dbBrands);
-          } else {
+            localStorage.setItem('b2b_brands_v4', JSON.stringify(dbBrands));
+          } else if (dbBrands !== null) {
             setBrands(defaultBrands);
             await syncBrandsInCloud(defaultBrands);
           }
@@ -106,7 +201,8 @@ export default function App() {
           const dbCategories = await fetchCategories();
           if (dbCategories && dbCategories.length > 0) {
             setCategories(dbCategories);
-          } else {
+            localStorage.setItem('b2b_categories_v4', JSON.stringify(dbCategories));
+          } else if (dbCategories !== null) {
             setCategories(defaultCategories);
             await syncCategoriesInCloud(defaultCategories);
           }
@@ -114,12 +210,13 @@ export default function App() {
           const dbKdv = await fetchKdvRates();
           if (dbKdv && dbKdv.length > 0) {
             setKdvRates(dbKdv);
-          } else {
+            localStorage.setItem('b2b_kdv_rates_v4', JSON.stringify(dbKdv));
+          } else if (dbKdv !== null) {
             setKdvRates(defaultKdv);
             await syncKdvRatesInCloud(defaultKdv);
           }
         } else {
-          // Firestore is blank/new, seed with local defaults (which prioritize user_data.json disk data!)
+          // Firestore is blank/new, seed with local defaults
           console.log("Firestore catalog is blank, seeding initial catalog defaults under custom backup...");
           await syncProductsInCloud(defaultProducts);
           await syncBrandsInCloud(defaultBrands);

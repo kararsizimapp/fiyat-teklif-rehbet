@@ -45,6 +45,12 @@ export interface FirestoreErrorInfo {
   };
 }
 
+export let isCloudQuotaExceeded = false;
+
+export function setCloudQuotaExceeded(val: boolean) {
+  isCloudQuotaExceeded = val;
+}
+
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
@@ -64,24 +70,15 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   };
   console.warn('Firestore Operation Warn/Error (non-fatal): ', JSON.stringify(errInfo));
   
-  const isQuotaExceeded = errInfo.error.toLowerCase().includes('quota') || 
-                          errInfo.error.toLowerCase().includes('exhausted') || 
-                          errInfo.error.toLowerCase().includes('backoff') ||
-                          errInfo.error.toLowerCase().includes('permission-denied') || 
-                          errInfo.error.toLowerCase().includes('permission_denied') ||
-                          errInfo.error.toLowerCase().includes('forbidden');
-
-  if (isQuotaExceeded) {
-    console.warn("Firestore system is running in local-only fallback mode due to transient quota restrictions or credentials.");
-    return; // Don't throw! Let client use in-memory / local storage gracefully.
-  }
-
-  throw new Error(JSON.stringify(errInfo));
+  // Cleanly switch the entire application's flow to stable local-only fallback mode (localStorage & local memory)
+  isCloudQuotaExceeded = true;
+  console.warn("Firestore system is running in local-only fallback mode due to transient quota restrictions or credentials.");
 }
 
-// CATALOG SYNCING FUNCTIONS (Direct collection edits)
+// CATALOG SYNCING FUNCTIONS (Direct collection edits with safe null fallback)
 
-export const fetchProducts = async (): Promise<Product[]> => {
+export const fetchProducts = async (): Promise<Product[] | null> => {
+  if (isCloudQuotaExceeded) return null;
   try {
     const snap = await getDocs(collection(db, 'products'));
     const list: Product[] = [];
@@ -91,11 +88,12 @@ export const fetchProducts = async (): Promise<Product[]> => {
     return list;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, 'products');
-    return [];
+    return isCloudQuotaExceeded ? null : [];
   }
 };
 
-export const fetchBrands = async (): Promise<BrandInfo[]> => {
+export const fetchBrands = async (): Promise<BrandInfo[] | null> => {
+  if (isCloudQuotaExceeded) return null;
   try {
     const snap = await getDocs(collection(db, 'brands'));
     const list: BrandInfo[] = [];
@@ -105,11 +103,12 @@ export const fetchBrands = async (): Promise<BrandInfo[]> => {
     return list;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, 'brands');
-    return [];
+    return isCloudQuotaExceeded ? null : [];
   }
 };
 
-export const fetchCategories = async (): Promise<CategoryInfo[]> => {
+export const fetchCategories = async (): Promise<CategoryInfo[] | null> => {
+  if (isCloudQuotaExceeded) return null;
   try {
     const snap = await getDocs(collection(db, 'categories'));
     const list: CategoryInfo[] = [];
@@ -119,11 +118,12 @@ export const fetchCategories = async (): Promise<CategoryInfo[]> => {
     return list;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, 'categories');
-    return [];
+    return isCloudQuotaExceeded ? null : [];
   }
 };
 
-export const fetchKdvRates = async (): Promise<number[]> => {
+export const fetchKdvRates = async (): Promise<number[] | null> => {
+  if (isCloudQuotaExceeded) return null;
   try {
     const snap = await getDocs(collection(db, 'kdvRates'));
     const list: number[] = [];
@@ -136,7 +136,7 @@ export const fetchKdvRates = async (): Promise<number[]> => {
     return list.sort((a,b) => b-a);
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, 'kdvRates');
-    return [];
+    return isCloudQuotaExceeded ? null : [];
   }
 };
 
@@ -163,8 +163,10 @@ export function cleanUndefined<T>(obj: T): T {
 
 // Sync functions that perform deletes on orphans and set/overwrite new ones
 export const syncProductsInCloud = async (newProducts: Product[]) => {
+  if (isCloudQuotaExceeded) return;
   try {
     const current = await fetchProducts();
+    if (current === null) return; // quota exceeded or error, bypass
     const currentIds = new Set(current.map(p => p.id));
     const newIds = new Set(newProducts.map(p => p.id));
 
@@ -186,8 +188,10 @@ export const syncProductsInCloud = async (newProducts: Product[]) => {
 };
 
 export const syncBrandsInCloud = async (newBrands: BrandInfo[]) => {
+  if (isCloudQuotaExceeded) return;
   try {
     const current = await fetchBrands();
+    if (current === null) return;
     const currentNames = new Set(current.map(b => b.name));
     const newNames = new Set(newBrands.map(b => b.name));
 
@@ -212,8 +216,10 @@ export const syncBrandsInCloud = async (newBrands: BrandInfo[]) => {
 };
 
 export const syncCategoriesInCloud = async (newCategories: CategoryInfo[]) => {
+  if (isCloudQuotaExceeded) return;
   try {
     const current = await fetchCategories();
+    if (current === null) return;
     const currentIds = new Set(current.map(c => c.id));
     const newIds = new Set(newCategories.map(c => c.id));
 
@@ -235,8 +241,10 @@ export const syncCategoriesInCloud = async (newCategories: CategoryInfo[]) => {
 };
 
 export const syncKdvRatesInCloud = async (newRates: number[]) => {
+  if (isCloudQuotaExceeded) return;
   try {
     const current = await fetchKdvRates();
+    if (current === null) return;
     const currentSet = new Set(current);
     const newSet = new Set(newRates);
 

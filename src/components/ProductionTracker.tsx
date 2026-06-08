@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import * as Icons from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { db, handleFirestoreError, OperationType, cleanUndefined } from '../firebase';
+import { db, handleFirestoreError, OperationType, cleanUndefined, isCloudQuotaExceeded } from '../firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 interface SheetRow {
@@ -206,6 +206,7 @@ export function ProductionTracker() {
 
   // Synchronize dynamic Sheet Rows in Real-time from Firestore Cloud with safe fallback
   useEffect(() => {
+    if (isCloudQuotaExceeded) return;
     const unsub = onSnapshot(collection(db, 'sheetRows'), async (snap) => {
       try {
         if (!snap.empty) {
@@ -216,6 +217,7 @@ export function ProductionTracker() {
           setSheetRows(list);
         } else {
           console.log("Firestore sheetRows is blank. Attempting to seed from defaults...");
+          if (isCloudQuotaExceeded) return;
           try {
             for (const row of INITIAL_SHEET_ROWS) {
               await setDoc(doc(db, 'sheetRows', row.id), cleanUndefined(row));
@@ -229,12 +231,14 @@ export function ProductionTracker() {
       }
     }, (error) => {
       console.warn("Firestore onSnapshot sheetRows fail-safe handler executed:", error);
+      handleFirestoreError(error, OperationType.LIST, 'sheetRows');
     });
     return () => unsub();
   }, []);
 
   // Synchronize dynamic Notifications in Real-time from Firestore Cloud with safe fallback
   useEffect(() => {
+    if (isCloudQuotaExceeded) return;
     const unsub = onSnapshot(collection(db, 'notifications'), async (snap) => {
       try {
         if (!snap.empty) {
@@ -247,6 +251,7 @@ export function ProductionTracker() {
           setNotifications(list);
         } else {
           console.log("Firestore notifications is blank. Attempting to seed from defaults...");
+          if (isCloudQuotaExceeded) return;
           try {
             for (const notif of INITIAL_NOTIFICATIONS) {
               await setDoc(doc(db, 'notifications', notif.id), cleanUndefined(notif));
@@ -260,6 +265,7 @@ export function ProductionTracker() {
       }
     }, (error) => {
       console.warn("Firestore onSnapshot notifications fail-safe handler executed:", error);
+      handleFirestoreError(error, OperationType.LIST, 'notifications');
     });
     return () => unsub();
   }, []);
@@ -283,6 +289,7 @@ export function ProductionTracker() {
         return updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       });
       setRecentToast(notif);
+      if (isCloudQuotaExceeded) return;
       await setDoc(doc(db, 'notifications', notif.id), cleanUndefined(notif));
     } catch (e) {
       console.warn("Could not sync notification to cloud database, showed internally:", e);
@@ -338,6 +345,7 @@ export function ProductionTracker() {
 
   // Save a single row to cloud database
   const saveSingleRow = async (row: SheetRow) => {
+    if (isCloudQuotaExceeded) return;
     try {
       await setDoc(doc(db, 'sheetRows', row.id), cleanUndefined(row));
     } catch (e) {
@@ -1048,6 +1056,7 @@ export function ProductionTracker() {
                     type="button"
                     onClick={async () => {
                       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                      if (isCloudQuotaExceeded) return;
                       for (const n of notifications) {
                         if (!n.isRead) {
                           try {
@@ -1069,6 +1078,7 @@ export function ProductionTracker() {
                     type="button"
                     onClick={async () => {
                       setNotifications([]);
+                      if (isCloudQuotaExceeded) return;
                       for (const n of notifications) {
                         try {
                           await deleteDoc(doc(db, 'notifications', n.id));
@@ -1147,10 +1157,12 @@ export function ProductionTracker() {
                       onClick={async () => {
                         // Mark as read on click
                         setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
-                        try {
-                          await setDoc(doc(db, 'notifications', notif.id), cleanUndefined({ ...notif, isRead: true }));
-                        } catch (e) {
-                          console.warn("Could not mark single notification read in cloud:", e);
+                        if (!isCloudQuotaExceeded) {
+                          try {
+                            await setDoc(doc(db, 'notifications', notif.id), cleanUndefined({ ...notif, isRead: true }));
+                          } catch (e) {
+                            console.warn("Could not mark single notification read in cloud:", e);
+                          }
                         }
                         
                         // Select order if exists
