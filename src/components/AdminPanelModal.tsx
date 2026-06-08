@@ -619,7 +619,19 @@ export function AdminPanelModal({
     e.preventDefault();
     if (!newCatName.trim() || !newCatId.trim()) return;
 
-    const formattedId = newCatId.trim().toLowerCase().replace(/\s+/g, '-');
+    // Transliterate Turkish characters safely and strip symbols for flawless Slug IDs
+    const turkishMap: { [key: string]: string } = {
+      'ı': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c',
+      'İ': 'i', 'Ş': 's', 'Ğ': 'g', 'Ü': 'u', 'Ö': 'o', 'Ç': 'c'
+    };
+    let cleanSlug = newCatId.trim().toLowerCase();
+    for (const key of Object.keys(turkishMap)) {
+      cleanSlug = cleanSlug.split(key).join(turkishMap[key]);
+    }
+    const formattedId = cleanSlug
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
 
     if (editingCategory) {
       if (formattedId !== editingCategory.id && categories.some(c => c.id === formattedId)) {

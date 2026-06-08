@@ -186,13 +186,26 @@ export default function App() {
         if (dbProducts === null) {
           console.warn("Firestore system is in quota exceeded or local fallback state. Skipping database seeding.");
         } else if (dbProducts.length > 0) {
-          setProducts(dbProducts);
-          localStorage.setItem('b2b_products_v4', JSON.stringify(dbProducts));
+          // Merge dbProducts with any local/custom products that don't exist in dbProducts
+          const mergedProducts = [...dbProducts];
+          for (const localP of defaultProducts) {
+            if (!mergedProducts.some(p => p.id === localP.id)) {
+              mergedProducts.push(localP);
+            }
+          }
+          setProducts(mergedProducts);
+          localStorage.setItem('b2b_products_v4', JSON.stringify(mergedProducts));
           
           const dbBrands = await fetchBrands();
           if (dbBrands && dbBrands.length > 0) {
-            setBrands(dbBrands);
-            localStorage.setItem('b2b_brands_v4', JSON.stringify(dbBrands));
+            const mergedBrands = [...dbBrands];
+            for (const localB of defaultBrands) {
+              if (!mergedBrands.some(b => b.name.toLowerCase() === localB.name.toLowerCase())) {
+                mergedBrands.push(localB);
+              }
+            }
+            setBrands(mergedBrands);
+            localStorage.setItem('b2b_brands_v4', JSON.stringify(mergedBrands));
           } else if (dbBrands !== null) {
             setBrands(defaultBrands);
             await syncBrandsInCloud(defaultBrands);
@@ -200,8 +213,14 @@ export default function App() {
 
           const dbCategories = await fetchCategories();
           if (dbCategories && dbCategories.length > 0) {
-            setCategories(dbCategories);
-            localStorage.setItem('b2b_categories_v4', JSON.stringify(dbCategories));
+            const mergedCategories = [...dbCategories];
+            for (const localC of defaultCategories) {
+              if (!mergedCategories.some(c => c.id === localC.id)) {
+                mergedCategories.push(localC);
+              }
+            }
+            setCategories(mergedCategories);
+            localStorage.setItem('b2b_categories_v4', JSON.stringify(mergedCategories));
           } else if (dbCategories !== null) {
             setCategories(defaultCategories);
             await syncCategoriesInCloud(defaultCategories);
@@ -209,8 +228,15 @@ export default function App() {
 
           const dbKdv = await fetchKdvRates();
           if (dbKdv && dbKdv.length > 0) {
-            setKdvRates(dbKdv);
-            localStorage.setItem('b2b_kdv_rates_v4', JSON.stringify(dbKdv));
+            const mergedKdv = [...dbKdv];
+            for (const localK of defaultKdv) {
+              if (!mergedKdv.includes(localK)) {
+                mergedKdv.push(localK);
+              }
+            }
+            const sortedKdv = mergedKdv.sort((a, b) => b - a);
+            setKdvRates(sortedKdv);
+            localStorage.setItem('b2b_kdv_rates_v4', JSON.stringify(sortedKdv));
           } else if (dbKdv !== null) {
             setKdvRates(defaultKdv);
             await syncKdvRatesInCloud(defaultKdv);
