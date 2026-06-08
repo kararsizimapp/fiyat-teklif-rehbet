@@ -169,26 +169,96 @@ export default function App() {
         const localCats = localStorage.getItem('b2b_categories_v4');
         const localKdv = localStorage.getItem('b2b_kdv_rates_v4');
 
-        let defaultProducts = PRODUCTS;
-        let defaultBrands = BRANDS;
-        let defaultCategories = CATEGORIES;
+        let defaultProducts = [...PRODUCTS];
+        let defaultBrands = [...BRANDS];
+        let defaultCategories = [...CATEGORIES];
         let defaultKdv = [20, 10, 1, 0];
 
-        // 1. Prioritize Server-side custom disk backup data (user_data.json) if it exists
+        // 1. Process and merge Server-side custom disk backup data (user_data.json) if it exists
         if (diskData) {
-          if (diskData.products && diskData.products.length > 0) defaultProducts = diskData.products;
-          if (diskData.brands && diskData.brands.length > 0) defaultBrands = diskData.brands;
-          if (diskData.categories && diskData.categories.length > 0) defaultCategories = diskData.categories;
-          if (diskData.kdvRates && diskData.kdvRates.length > 0) defaultKdv = diskData.kdvRates;
+          if (diskData.products && diskData.products.length > 0) {
+            diskData.products.forEach((diskP: Product) => {
+              const idx = defaultProducts.findIndex(p => p.id === diskP.id);
+              if (idx !== -1) {
+                defaultProducts[idx] = diskP;
+              } else {
+                defaultProducts.push(diskP);
+              }
+            });
+          }
+          if (diskData.brands && diskData.brands.length > 0) {
+            diskData.brands.forEach((diskB: BrandInfo) => {
+              const idx = defaultBrands.findIndex(b => b.name.toLowerCase() === diskB.name.toLowerCase());
+              if (idx !== -1) {
+                defaultBrands[idx] = diskB;
+              } else {
+                defaultBrands.push(diskB);
+              }
+            });
+          }
+          if (diskData.categories && diskData.categories.length > 0) {
+            diskData.categories.forEach((diskC: CategoryInfo) => {
+              const idx = defaultCategories.findIndex(c => c.id === diskC.id);
+              if (idx !== -1) {
+                defaultCategories[idx] = diskC;
+              } else {
+                defaultCategories.push(diskC);
+              }
+            });
+          }
+          if (diskData.kdvRates && diskData.kdvRates.length > 0) {
+            diskData.kdvRates.forEach((diskK: number) => {
+              if (!defaultKdv.includes(diskK)) {
+                defaultKdv.push(diskK);
+              }
+            });
+            defaultKdv = defaultKdv.sort((a, b) => b - a);
+          }
         }
 
-        // 2. Fall back to local storage cache only if server backup is not available or new
+        // 2. Fetch and merge local storage cache
         try {
-          if (!diskData || !diskData.products || diskData.products.length === 0) {
-            if (localProds) defaultProducts = JSON.parse(localProds);
-            if (localBrands) defaultBrands = JSON.parse(localBrands);
-            if (localCats) defaultCategories = JSON.parse(localCats);
-            if (localKdv) defaultKdv = JSON.parse(localKdv);
+          if (localProds) {
+            const parsedProds = JSON.parse(localProds) as Product[];
+            parsedProds.forEach((lp: Product) => {
+              const idx = defaultProducts.findIndex(p => p.id === lp.id);
+              if (idx !== -1) {
+                defaultProducts[idx] = lp;
+              } else {
+                defaultProducts.push(lp);
+              }
+            });
+          }
+          if (localBrands) {
+            const parsedBrands = JSON.parse(localBrands) as BrandInfo[];
+            parsedBrands.forEach((lb: BrandInfo) => {
+              const idx = defaultBrands.findIndex(b => b.name.toLowerCase() === lb.name.toLowerCase());
+              if (idx !== -1) {
+                defaultBrands[idx] = lb;
+              } else {
+                defaultBrands.push(lb);
+              }
+            });
+          }
+          if (localCats) {
+            const parsedCats = JSON.parse(localCats) as CategoryInfo[];
+            parsedCats.forEach((lc: CategoryInfo) => {
+              const idx = defaultCategories.findIndex(c => c.id === lc.id);
+              if (idx !== -1) {
+                defaultCategories[idx] = lc;
+              } else {
+                defaultCategories.push(lc);
+              }
+            });
+          }
+          if (localKdv) {
+            const parsedKdv = JSON.parse(localKdv) as number[];
+            parsedKdv.forEach((lk: number) => {
+              if (!defaultKdv.includes(lk)) {
+                defaultKdv.push(lk);
+              }
+            });
+            defaultKdv = defaultKdv.sort((a, b) => b - a);
           }
         } catch (e) {
           console.warn("Error parsing localStorage cache:", e);
