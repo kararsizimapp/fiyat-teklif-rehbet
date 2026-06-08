@@ -8,15 +8,10 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth();
 
-// Silent anonymous auth function to authenticate users on load
+export let isCloudQuotaExceeded = true;
+
 export const initAnonymousAuth = async (): Promise<string> => {
-  try {
-    const userCredential = await signInAnonymously(auth);
-    return userCredential.user.uid;
-  } catch (error) {
-    console.warn("Firebase background user autologin is disabled or restricted in the Firebase console. Falling back to guest access. Error details:", error);
-    return "guest_user";
-  }
+  return "guest_user";
 };
 
 export enum OperationType {
@@ -44,8 +39,6 @@ export interface FirestoreErrorInfo {
     }[];
   };
 }
-
-export let isCloudQuotaExceeded = false;
 
 export function setCloudQuotaExceeded(val: boolean) {
   isCloudQuotaExceeded = val;
