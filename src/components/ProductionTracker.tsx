@@ -554,6 +554,87 @@ export function ProductionTracker() {
   }, [activeRepEmail]);
 
   return (
+    <div className="relative overflow-hidden bg-slate-950 rounded-3xl p-8 md:p-14 border border-slate-850 shadow-2xl flex flex-col items-center justify-center text-center min-h-[540px]">
+      {/* Decorative ambient glowing circles */}
+      <div className="absolute top-0 left-1/4 w-80 h-80 bg-red-500/5 rounded-full blur-[100px] -translate-y-1/2 pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-indigo-500/5 rounded-full blur-[100px] translate-y-1/2 pointer-events-none" />
+
+      <div className="relative z-10 max-w-xl flex flex-col items-center gap-6">
+        {/* Modern High-contrast Geliştirme Aşamasında Badge */}
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] font-extrabold uppercase tracking-widest px-3.5 py-1.5 rounded-full animate-pulse"
+        >
+          <Icons.Wrench className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '4s' }} />
+          Geliştirme Aşamasında
+        </motion.div>
+
+        {/* Creative Visual Asset Block */}
+        <div className="relative w-24 h-24 bg-slate-900 border border-slate-800 rounded-3xl flex items-center justify-center shadow-xl mt-3">
+          <Icons.Rocket className="w-10 h-10 text-red-500 animate-bounce" style={{ animationDuration: '2.5s' }} />
+          <div className="absolute -bottom-1 -right-1 bg-indigo-600 text-white p-1.5 rounded-xl border-2 border-slate-950 shadow-lg">
+            <Icons.Clock className="w-3.5 h-3.5 animate-pulse" />
+          </div>
+        </div>
+
+        {/* Typography-crafted Display Header */}
+        <div className="space-y-4 mt-2">
+          <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight leading-tight">
+            Canlı Üretim Takip Sistemi <br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-pink-500 to-indigo-400 font-extrabold">
+              Çok Yakında Hizmetinizde!
+            </span>
+          </h2>
+          <p className="text-slate-400 font-semibold text-xs md:text-sm max-w-lg leading-relaxed mx-auto">
+            Google Sheets tablonuz ile tam entegre, anlık sipariş aşamalarını, dikiş, baskı ve sevkiyat durumlarını canlandırmaya yönelik geliştirmeler tamamlanıyor. Şu anda geçici olarak işlem yapılamamaktadır.
+          </p>
+        </div>
+
+        {/* Modular Grid of Core Previews */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-6 text-left">
+          <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-4.5 flex gap-3.5 hover:border-slate-800 transition-all">
+            <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl text-red-400 h-11 w-11 flex items-center justify-center shrink-0">
+              <Icons.FileSpreadsheet className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-extrabold text-slate-100">Google Sheets Bağlantısı</h4>
+              <p className="text-[11px] text-slate-400 font-medium mt-1 leading-relaxed">
+                Arka plan excel verilerinize tam entegre çalışır, tüm süreçleri tek tuşla senkronize eder.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-4.5 flex gap-3.5 hover:border-slate-800 transition-all">
+            <div className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-indigo-400 h-11 w-11 flex items-center justify-center shrink-0">
+              <Icons.Bell className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <h4 className="text-xs font-extrabold text-slate-100">Anlık Takip & Bildirim</h4>
+              <p className="text-[11px] text-slate-400 font-medium mt-1 leading-relaxed">
+                Bantlardaki durum değişiklikleri ve önemli uyarılar otomatik bildirim merkezine akacaktır.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Current status footer bar */}
+        <div className="w-full bg-slate-900/60 border border-slate-900 rounded-2xl p-3 px-4.5 flex items-center justify-between text-xs font-bold text-slate-400 mt-4">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            </span>
+            Sunucu Modülü Durumu
+          </div>
+          <span className="font-extrabold text-[10px] tracking-wider uppercase text-indigo-400">Test & Optimizasyon</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
     <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col gap-6 text-left">
       
       {/* Top Config Header with Representative selection and Sheets url input */}

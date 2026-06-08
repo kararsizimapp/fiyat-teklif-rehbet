@@ -240,100 +240,62 @@ export default function App() {
         const localCats = localStorage.getItem('b2b_categories_v4');
         const localKdv = localStorage.getItem('b2b_kdv_rates_v4');
 
-        let defaultProducts = [...INITIAL_PRODUCTS];
-        let defaultBrands = [...INITIAL_BRANDS];
-        let defaultCategories = [...INITIAL_CATEGORIES];
-        let defaultKdv = [...INITIAL_KDV];
+        let defaultProducts: Product[] = [];
+        let defaultBrands: BrandInfo[] = [];
+        let defaultCategories: CategoryInfo[] = [];
+        let defaultKdv: number[] = [];
 
-        // 1. Process and merge Server-side custom disk backup data (user_data.json) if it exists
+        // 1. Process server-side custom disk backup data (user_data.json) if it exists as the primary fallback
         if (diskData) {
           if (diskData.products && diskData.products.length > 0) {
-            diskData.products.forEach((diskP: Product) => {
-              const idx = defaultProducts.findIndex(p => p.id === diskP.id);
-              if (idx !== -1) {
-                defaultProducts[idx] = diskP;
-              } else {
-                defaultProducts.push(diskP);
-              }
-            });
+            defaultProducts = diskData.products;
           }
           if (diskData.brands && diskData.brands.length > 0) {
-            diskData.brands.forEach((diskB: BrandInfo) => {
-              const idx = defaultBrands.findIndex(b => b.name.toLowerCase() === diskB.name.toLowerCase());
-              if (idx !== -1) {
-                defaultBrands[idx] = diskB;
-              } else {
-                defaultBrands.push(diskB);
-              }
-            });
+            defaultBrands = diskData.brands;
           }
           if (diskData.categories && diskData.categories.length > 0) {
-            diskData.categories.forEach((diskC: CategoryInfo) => {
-              const idx = defaultCategories.findIndex(c => c.id === diskC.id);
-              if (idx !== -1) {
-                defaultCategories[idx] = diskC;
-              } else {
-                defaultCategories.push(diskC);
-              }
-            });
+            defaultCategories = diskData.categories;
           }
           if (diskData.kdvRates && diskData.kdvRates.length > 0) {
-            diskData.kdvRates.forEach((diskK: number) => {
-              if (!defaultKdv.includes(diskK)) {
-                defaultKdv.push(diskK);
-              }
-            });
-            defaultKdv = defaultKdv.sort((a, b) => b - a);
+            defaultKdv = diskData.kdvRates;
           }
         }
 
-        // 2. Fetch and merge local storage cache
+        // 2. Override or load local storage cache as the absolute current browser state
         try {
           if (localProds) {
             const parsedProds = JSON.parse(localProds) as Product[];
-            parsedProds.forEach((lp: Product) => {
-              const idx = defaultProducts.findIndex(p => p.id === lp.id);
-              if (idx !== -1) {
-                defaultProducts[idx] = lp;
-              } else {
-                defaultProducts.push(lp);
-              }
-            });
+            if (parsedProds && parsedProds.length > 0) {
+              defaultProducts = parsedProds;
+            }
           }
           if (localBrands) {
             const parsedBrands = JSON.parse(localBrands) as BrandInfo[];
-            parsedBrands.forEach((lb: BrandInfo) => {
-              const idx = defaultBrands.findIndex(b => b.name.toLowerCase() === lb.name.toLowerCase());
-              if (idx !== -1) {
-                defaultBrands[idx] = lb;
-              } else {
-                defaultBrands.push(lb);
-              }
-            });
+            if (parsedBrands && parsedBrands.length > 0) {
+              defaultBrands = parsedBrands;
+            }
           }
           if (localCats) {
             const parsedCats = JSON.parse(localCats) as CategoryInfo[];
-            parsedCats.forEach((lc: CategoryInfo) => {
-              const idx = defaultCategories.findIndex(c => c.id === lc.id);
-              if (idx !== -1) {
-                defaultCategories[idx] = lc;
-              } else {
-                defaultCategories.push(lc);
-              }
-            });
+            if (parsedCats && parsedCats.length > 0) {
+              defaultCategories = parsedCats;
+            }
           }
           if (localKdv) {
             const parsedKdv = JSON.parse(localKdv) as number[];
-            parsedKdv.forEach((lk: number) => {
-              if (!defaultKdv.includes(lk)) {
-                defaultKdv.push(lk);
-              }
-            });
-            defaultKdv = defaultKdv.sort((a, b) => b - a);
+            if (parsedKdv && parsedKdv.length > 0) {
+              defaultKdv = parsedKdv;
+            }
           }
         } catch (e) {
           console.warn("Error parsing localStorage cache:", e);
         }
+
+        // 3. Fallback to compiled compile-time templates ONLY when there is no custom data anywhere
+        if (defaultProducts.length === 0) defaultProducts = [...INITIAL_PRODUCTS];
+        if (defaultBrands.length === 0) defaultBrands = [...INITIAL_BRANDS];
+        if (defaultCategories.length === 0) defaultCategories = [...INITIAL_CATEGORIES];
+        if (defaultKdv.length === 0) defaultKdv = [...INITIAL_KDV];
 
         // Standardize base state with fallback priority first to minimize loading jumps
         setProducts(defaultProducts);
@@ -341,31 +303,19 @@ export default function App() {
         setCategories(defaultCategories);
         setKdvRates(defaultKdv);
 
-        // 2. Fetch from Firebase Firestore
+        // 4. Fetch from Firebase Firestore as the ultimate shared authority
         const dbProducts = await fetchProducts();
         if (dbProducts === null) {
           console.warn("Firestore system is in quota exceeded or local fallback state. Skipping database seeding.");
         } else if (dbProducts.length > 0) {
-          // Merge dbProducts with any local/custom products that don't exist in dbProducts
-          const mergedProducts = [...dbProducts];
-          for (const localP of defaultProducts) {
-            if (!mergedProducts.some(p => p.id === localP.id)) {
-              mergedProducts.push(localP);
-            }
-          }
-          setProducts(mergedProducts);
-          localStorage.setItem('b2b_products_v4', JSON.stringify(mergedProducts));
+          // Firebase Firestore is active and has items. Trust it as the single, absolute source of truth!
+          setProducts(dbProducts);
+          localStorage.setItem('b2b_products_v4', JSON.stringify(dbProducts));
           
           const dbBrands = await fetchBrands();
           if (dbBrands && dbBrands.length > 0) {
-            const mergedBrands = [...dbBrands];
-            for (const localB of defaultBrands) {
-              if (!mergedBrands.some(b => b.name.toLowerCase() === localB.name.toLowerCase())) {
-                mergedBrands.push(localB);
-              }
-            }
-            setBrands(mergedBrands);
-            localStorage.setItem('b2b_brands_v4', JSON.stringify(mergedBrands));
+            setBrands(dbBrands);
+            localStorage.setItem('b2b_brands_v4', JSON.stringify(dbBrands));
           } else if (dbBrands !== null) {
             setBrands(defaultBrands);
             await syncBrandsInCloud(defaultBrands);
@@ -373,14 +323,8 @@ export default function App() {
 
           const dbCategories = await fetchCategories();
           if (dbCategories && dbCategories.length > 0) {
-            const mergedCategories = [...dbCategories];
-            for (const localC of defaultCategories) {
-              if (!mergedCategories.some(c => c.id === localC.id)) {
-                mergedCategories.push(localC);
-              }
-            }
-            setCategories(mergedCategories);
-            localStorage.setItem('b2b_categories_v4', JSON.stringify(mergedCategories));
+            setCategories(dbCategories);
+            localStorage.setItem('b2b_categories_v4', JSON.stringify(dbCategories));
           } else if (dbCategories !== null) {
             setCategories(defaultCategories);
             await syncCategoriesInCloud(defaultCategories);
@@ -388,19 +332,21 @@ export default function App() {
 
           const dbKdv = await fetchKdvRates();
           if (dbKdv && dbKdv.length > 0) {
-            const mergedKdv = [...dbKdv];
-            for (const localK of defaultKdv) {
-              if (!mergedKdv.includes(localK)) {
-                mergedKdv.push(localK);
-              }
-            }
-            const sortedKdv = mergedKdv.sort((a, b) => b - a);
+            const sortedKdv = dbKdv.sort((a, b) => b - a);
             setKdvRates(sortedKdv);
             localStorage.setItem('b2b_kdv_rates_v4', JSON.stringify(sortedKdv));
           } else if (dbKdv !== null) {
             setKdvRates(defaultKdv);
             await syncKdvRatesInCloud(defaultKdv);
           }
+
+          // Force update local server-side custom disk backup to match Firestore authority perfectly
+          await saveDiskBackup(
+            dbProducts, 
+            dbBrands && dbBrands.length > 0 ? dbBrands : defaultBrands, 
+            dbCategories && dbCategories.length > 0 ? dbCategories : defaultCategories, 
+            dbKdv && dbKdv.length > 0 ? dbKdv : defaultKdv
+          );
         } else {
           // Firestore is blank/new, seed with local defaults
           console.log("Firestore catalog is blank, seeding initial catalog defaults under custom backup...");
@@ -408,6 +354,7 @@ export default function App() {
           await syncBrandsInCloud(defaultBrands);
           await syncCategoriesInCloud(defaultCategories);
           await syncKdvRatesInCloud(defaultKdv);
+          await saveDiskBackup(defaultProducts, defaultBrands, defaultCategories, defaultKdv);
         }
       } catch (err) {
         console.error("Failed to load/seed cloud catalog data:", err);
