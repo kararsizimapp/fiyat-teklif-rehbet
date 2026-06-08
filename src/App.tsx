@@ -5,71 +5,11 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { PRODUCTS, BRANDS, CATEGORIES } from './data';
-import userDataJson from '../user_data.json';
 
-// Prepare standard fallbacks by merging compile-time PRODUCTS/BRANDS/CATEGORIES with user_data.json
-const getInitialProducts = (): Product[] => {
-  let list = [...PRODUCTS];
-  if (userDataJson && userDataJson.products && userDataJson.products.length > 0) {
-    userDataJson.products.forEach((diskP: any) => {
-      const idx = list.findIndex(p => p.id === diskP.id);
-      if (idx !== -1) {
-        list[idx] = diskP as Product;
-      } else {
-        list.push(diskP as Product);
-      }
-    });
-  }
-  return list;
-};
-
-const getInitialBrands = (): BrandInfo[] => {
-  let list = [...BRANDS];
-  if (userDataJson && userDataJson.brands && userDataJson.brands.length > 0) {
-    userDataJson.brands.forEach((diskB: any) => {
-      const idx = list.findIndex(b => b.name.toLowerCase() === diskB.name.toLowerCase());
-      if (idx !== -1) {
-        list[idx] = diskB as BrandInfo;
-      } else {
-        list.push(diskB as BrandInfo);
-      }
-    });
-  }
-  return list;
-};
-
-const getInitialCategories = (): CategoryInfo[] => {
-  let list = [...CATEGORIES];
-  if (userDataJson && userDataJson.categories && userDataJson.categories.length > 0) {
-    userDataJson.categories.forEach((diskC: any) => {
-      const idx = list.findIndex(c => c.id === diskC.id);
-      if (idx !== -1) {
-        list[idx] = diskC as CategoryInfo;
-      } else {
-        list.push(diskC as CategoryInfo);
-      }
-    });
-  }
-  return list;
-};
-
-const getInitialKdv = (): number[] => {
-  let list = [20, 10, 1, 0];
-  if (userDataJson && userDataJson.kdvRates && userDataJson.kdvRates.length > 0) {
-    userDataJson.kdvRates.forEach((diskK: number) => {
-      if (!list.includes(diskK)) {
-        list.push(diskK);
-      }
-    });
-    list = list.sort((a, b) => b - a);
-  }
-  return list;
-};
-
-const INITIAL_PRODUCTS = getInitialProducts();
-const INITIAL_BRANDS = getInitialBrands();
-const INITIAL_CATEGORIES = getInitialCategories();
-const INITIAL_KDV = getInitialKdv();
+const INITIAL_PRODUCTS = PRODUCTS;
+const INITIAL_BRANDS = BRANDS;
+const INITIAL_CATEGORIES = CATEGORIES;
+const INITIAL_KDV = [20, 10, 1, 0];
 import { Product, SelectedOptionState, CalculatorItem, BrandInfo, CategoryInfo } from './types';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetailModal } from './components/ProductDetailModal';
