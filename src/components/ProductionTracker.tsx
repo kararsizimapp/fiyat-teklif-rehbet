@@ -187,6 +187,22 @@ export function ProductionTracker() {
   const [isSimulatorActive, setIsSimulatorActive] = useState<boolean>(true); // Active by default to demo real-time notifications
   const [recentToast, setRecentToast] = useState<TrackerNotification | null>(null);
 
+  const [localQuotaExceeded, setLocalQuotaExceeded] = useState(isCloudQuotaExceeded);
+
+  useEffect(() => {
+    const handleQuota = () => {
+      setLocalQuotaExceeded(true);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('firestore-quota-exceeded', handleQuota);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('firestore-quota-exceeded', handleQuota);
+      }
+    };
+  }, []);
+
   // Backup state to local storage when changed
   useEffect(() => {
     try {
@@ -206,69 +222,97 @@ export function ProductionTracker() {
 
   // Synchronize dynamic Sheet Rows in Real-time from Firestore Cloud with safe fallback
   useEffect(() => {
-    if (isCloudQuotaExceeded) return;
-    const unsub = onSnapshot(collection(db, 'sheetRows'), async (snap) => {
-      try {
-        if (!snap.empty) {
-          const list: SheetRow[] = [];
-          snap.forEach((d) => {
-            list.push(d.data() as SheetRow);
-          });
-          setSheetRows(list);
-        } else {
-          console.log("Firestore sheetRows is blank. Attempting to seed from defaults...");
-          if (isCloudQuotaExceeded) return;
-          try {
-            for (const row of INITIAL_SHEET_ROWS) {
-              await setDoc(doc(db, 'sheetRows', row.id), cleanUndefined(row));
+    if (localQuotaExceeded) return;
+    let active = true;
+    let unsub: () => void = () => {};
+    
+    try {
+      unsub = onSnapshot(collection(db, 'sheetRows'), async (snap) => {
+        if (!active) return;
+        try {
+          if (!snap.empty) {
+            const list: SheetRow[] = [];
+            snap.forEach((d) => {
+              list.push(d.data() as SheetRow);
+            });
+            setSheetRows(list);
+          } else {
+            console.log("Firestore sheetRows is blank. Attempting to seed from defaults...");
+            if (localQuotaExceeded) return;
+            try {
+              for (const row of INITIAL_SHEET_ROWS) {
+                await setDoc(doc(db, 'sheetRows', row.id), cleanUndefined(row));
+              }
+            } catch (seedErr) {
+              console.warn("Could not seed sheetRows cloud data due to quota limits, running with local copy", seedErr);
             }
-          } catch (seedErr) {
-            console.warn("Could not seed sheetRows cloud data due to quota limits, running with local copy", seedErr);
           }
+        } catch (err) {
+          console.warn("Sync error retrieving live sheetRows. Local-only mode active", err);
         }
-      } catch (err) {
-        console.warn("Sync error retrieving live sheetRows. Local-only mode active", err);
-      }
-    }, (error) => {
-      console.warn("Firestore onSnapshot sheetRows fail-safe handler executed:", error);
-      handleFirestoreError(error, OperationType.LIST, 'sheetRows');
-    });
-    return () => unsub();
-  }, []);
+      }, (error) => {
+        console.warn("Firestore onSnapshot sheetRows fail-safe handler executed:", error);
+        handleFirestoreError(error, OperationType.LIST, 'sheetRows');
+        active = false;
+        unsub(); // Stop listening immediately to stop network spam & console flood!
+      });
+    } catch (e) {
+      console.warn("Failed to subscribe onSnapshot for sheetRows:", e);
+    }
+    
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, [localQuotaExceeded]);
 
   // Synchronize dynamic Notifications in Real-time from Firestore Cloud with safe fallback
   useEffect(() => {
-    if (isCloudQuotaExceeded) return;
-    const unsub = onSnapshot(collection(db, 'notifications'), async (snap) => {
-      try {
-        if (!snap.empty) {
-          const list: TrackerNotification[] = [];
-          snap.forEach((d) => {
-            list.push(d.data() as TrackerNotification);
-          });
-          // Sort descending by timestamp
-          list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-          setNotifications(list);
-        } else {
-          console.log("Firestore notifications is blank. Attempting to seed from defaults...");
-          if (isCloudQuotaExceeded) return;
-          try {
-            for (const notif of INITIAL_NOTIFICATIONS) {
-              await setDoc(doc(db, 'notifications', notif.id), cleanUndefined(notif));
+    if (localQuotaExceeded) return;
+    let active = true;
+    let unsub: () => void = () => {};
+    
+    try {
+      unsub = onSnapshot(collection(db, 'notifications'), async (snap) => {
+        if (!active) return;
+        try {
+          if (!snap.empty) {
+            const list: TrackerNotification[] = [];
+            snap.forEach((d) => {
+              list.push(d.data() as TrackerNotification);
+            });
+            // Sort descending by timestamp
+            list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            setNotifications(list);
+          } else {
+            console.log("Firestore notifications is blank. Attempting to seed from defaults...");
+            if (localQuotaExceeded) return;
+            try {
+              for (const notif of INITIAL_NOTIFICATIONS) {
+                await setDoc(doc(db, 'notifications', notif.id), cleanUndefined(notif));
+              }
+            } catch (seedErr) {
+              console.warn("Could not seed notifications cloud data due to quota limits, running with local copy", seedErr);
             }
-          } catch (seedErr) {
-            console.warn("Could not seed notifications cloud data due to quota limits, running with local copy", seedErr);
           }
+        } catch (err) {
+          console.warn("Sync error retrieving live notifications. Local-only mode active", err);
         }
-      } catch (err) {
-        console.warn("Sync error retrieving live notifications. Local-only mode active", err);
-      }
-    }, (error) => {
-      console.warn("Firestore onSnapshot notifications fail-safe handler executed:", error);
-      handleFirestoreError(error, OperationType.LIST, 'notifications');
-    });
-    return () => unsub();
-  }, []);
+      }, (error) => {
+        console.warn("Firestore onSnapshot notifications fail-safe handler executed:", error);
+        handleFirestoreError(error, OperationType.LIST, 'notifications');
+        active = false;
+        unsub(); // Stop listening immediately to stop network spam & console flood!
+      });
+    } catch (e) {
+      console.warn("Failed to subscribe onSnapshot for notifications:", e);
+    }
+    
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, [localQuotaExceeded]);
 
   // Auto-clear toast alert after a short duration
   useEffect(() => {
@@ -289,7 +333,7 @@ export function ProductionTracker() {
         return updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       });
       setRecentToast(notif);
-      if (isCloudQuotaExceeded) return;
+      if (localQuotaExceeded) return;
       await setDoc(doc(db, 'notifications', notif.id), cleanUndefined(notif));
     } catch (e) {
       console.warn("Could not sync notification to cloud database, showed internally:", e);
@@ -345,7 +389,7 @@ export function ProductionTracker() {
 
   // Save a single row to cloud database
   const saveSingleRow = async (row: SheetRow) => {
-    if (isCloudQuotaExceeded) return;
+    if (localQuotaExceeded) return;
     try {
       await setDoc(doc(db, 'sheetRows', row.id), cleanUndefined(row));
     } catch (e) {
@@ -1056,7 +1100,7 @@ export function ProductionTracker() {
                     type="button"
                     onClick={async () => {
                       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                      if (isCloudQuotaExceeded) return;
+                      if (localQuotaExceeded) return;
                       for (const n of notifications) {
                         if (!n.isRead) {
                           try {
@@ -1078,7 +1122,7 @@ export function ProductionTracker() {
                     type="button"
                     onClick={async () => {
                       setNotifications([]);
-                      if (isCloudQuotaExceeded) return;
+                      if (localQuotaExceeded) return;
                       for (const n of notifications) {
                         try {
                           await deleteDoc(doc(db, 'notifications', n.id));
@@ -1157,7 +1201,7 @@ export function ProductionTracker() {
                       onClick={async () => {
                         // Mark as read on click
                         setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
-                        if (!isCloudQuotaExceeded) {
+                        if (!localQuotaExceeded) {
                           try {
                             await setDoc(doc(db, 'notifications', notif.id), cleanUndefined({ ...notif, isRead: true }));
                           } catch (e) {

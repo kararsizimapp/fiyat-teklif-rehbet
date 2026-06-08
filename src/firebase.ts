@@ -49,6 +49,9 @@ export let isCloudQuotaExceeded = false;
 
 export function setCloudQuotaExceeded(val: boolean) {
   isCloudQuotaExceeded = val;
+  if (val && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('firestore-quota-exceeded'));
+  }
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
@@ -72,6 +75,9 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   
   // Cleanly switch the entire application's flow to stable local-only fallback mode (localStorage & local memory)
   isCloudQuotaExceeded = true;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('firestore-quota-exceeded'));
+  }
   console.warn("Firestore system is running in local-only fallback mode due to transient quota restrictions or credentials.");
 }
 

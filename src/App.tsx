@@ -23,7 +23,8 @@ import {
   syncProductsInCloud, 
   syncBrandsInCloud, 
   syncCategoriesInCloud, 
-  syncKdvRatesInCloud 
+  syncKdvRatesInCloud,
+  isCloudQuotaExceeded
 } from './firebase';
 
 export default function App() {
@@ -62,6 +63,21 @@ export default function App() {
     }
   });
   const [isCloudLoading, setIsCloudLoading] = useState<boolean>(true);
+  const [localQuotaExceeded, setLocalQuotaExceeded] = useState<boolean>(isCloudQuotaExceeded);
+
+  useEffect(() => {
+    const handleQuota = () => {
+      setLocalQuotaExceeded(true);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('firestore-quota-exceeded', handleQuota);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('firestore-quota-exceeded', handleQuota);
+      }
+    };
+  }, []);
 
   // Synchronize state with LocalStorage for ultra-robust client-side survival
   useEffect(() => {
@@ -605,6 +621,30 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* Safe Local Fallback Notification Banner */}
+      {localQuotaExceeded && (
+        <div id="quota-warning-banner" className="bg-amber-50 border-y border-amber-200/60 py-3 px-4 md:px-8 relative z-20">
+          <div className="max-w-7xl mx-auto flex items-start gap-3">
+            <div className="bg-amber-100 p-2 rounded-xl text-amber-800 shrink-0 mt-0.5">
+              <Icons.CloudLightning className="w-5 h-5 stroke-[2]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-black text-amber-950 tracking-tight">Bulut Kotası Sınırına Ulaşıldı (Çevrimdışı Çalışma Modu Aktif)</h4>
+              <p className="text-xs text-amber-700/90 font-medium mt-0.5 leading-relaxed">
+                Google Cloud Firestore günlük ücretsiz okuma, yazma veya kimlik doğrulama kotası geçici olarak dolmuştur. Sistem otomatik olarak <strong>çevrimdışı yedekleme (Local Storage & Disk yedek) moduna</strong> geçiş yaptı. Ürün kataloğunuzu inceleyebilir, fiyatları hesaplayabilir, sipariş ve üretim takibi işlemlerinizi yapmaya kesintisiz devam edebilirsiniz. Yaptığınız tüm değişiklikler tarayıcı belleğine güvenle yedeklenir.
+              </p>
+            </div>
+            <button
+              onClick={() => setLocalQuotaExceeded(false)}
+              className="text-amber-500 hover:text-amber-700 p-1 rounded-lg transition-colors cursor-pointer"
+              title="Kapat"
+            >
+              <Icons.X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Container Grid */}
       {isCloudLoading ? (
