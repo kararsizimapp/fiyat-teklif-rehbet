@@ -5,6 +5,71 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { PRODUCTS, BRANDS, CATEGORIES } from './data';
+import userDataJson from '../user_data.json';
+
+// Prepare standard fallbacks by merging compile-time PRODUCTS/BRANDS/CATEGORIES with user_data.json
+const getInitialProducts = (): Product[] => {
+  let list = [...PRODUCTS];
+  if (userDataJson && userDataJson.products && userDataJson.products.length > 0) {
+    userDataJson.products.forEach((diskP: any) => {
+      const idx = list.findIndex(p => p.id === diskP.id);
+      if (idx !== -1) {
+        list[idx] = diskP as Product;
+      } else {
+        list.push(diskP as Product);
+      }
+    });
+  }
+  return list;
+};
+
+const getInitialBrands = (): BrandInfo[] => {
+  let list = [...BRANDS];
+  if (userDataJson && userDataJson.brands && userDataJson.brands.length > 0) {
+    userDataJson.brands.forEach((diskB: any) => {
+      const idx = list.findIndex(b => b.name.toLowerCase() === diskB.name.toLowerCase());
+      if (idx !== -1) {
+        list[idx] = diskB as BrandInfo;
+      } else {
+        list.push(diskB as BrandInfo);
+      }
+    });
+  }
+  return list;
+};
+
+const getInitialCategories = (): CategoryInfo[] => {
+  let list = [...CATEGORIES];
+  if (userDataJson && userDataJson.categories && userDataJson.categories.length > 0) {
+    userDataJson.categories.forEach((diskC: any) => {
+      const idx = list.findIndex(c => c.id === diskC.id);
+      if (idx !== -1) {
+        list[idx] = diskC as CategoryInfo;
+      } else {
+        list.push(diskC as CategoryInfo);
+      }
+    });
+  }
+  return list;
+};
+
+const getInitialKdv = (): number[] => {
+  let list = [20, 10, 1, 0];
+  if (userDataJson && userDataJson.kdvRates && userDataJson.kdvRates.length > 0) {
+    userDataJson.kdvRates.forEach((diskK: number) => {
+      if (!list.includes(diskK)) {
+        list.push(diskK);
+      }
+    });
+    list = list.sort((a, b) => b - a);
+  }
+  return list;
+};
+
+const INITIAL_PRODUCTS = getInitialProducts();
+const INITIAL_BRANDS = getInitialBrands();
+const INITIAL_CATEGORIES = getInitialCategories();
+const INITIAL_KDV = getInitialKdv();
 import { Product, SelectedOptionState, CalculatorItem, BrandInfo, CategoryInfo } from './types';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetailModal } from './components/ProductDetailModal';
@@ -33,33 +98,33 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const saved = localStorage.getItem('b2b_products_v4');
-      return saved ? JSON.parse(saved) : PRODUCTS;
+      return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
     } catch {
-      return PRODUCTS;
+      return INITIAL_PRODUCTS;
     }
   });
   const [brands, setBrands] = useState<BrandInfo[]>(() => {
     try {
       const saved = localStorage.getItem('b2b_brands_v4');
-      return saved ? JSON.parse(saved) : BRANDS;
+      return saved ? JSON.parse(saved) : INITIAL_BRANDS;
     } catch {
-      return BRANDS;
+      return INITIAL_BRANDS;
     }
   });
   const [categories, setCategories] = useState<CategoryInfo[]>(() => {
     try {
       const saved = localStorage.getItem('b2b_categories_v4');
-      return saved ? JSON.parse(saved) : CATEGORIES;
+      return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
     } catch {
-      return CATEGORIES;
+      return INITIAL_CATEGORIES;
     }
   });
   const [kdvRates, setKdvRates] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem('b2b_kdv_rates_v4');
-      return saved ? JSON.parse(saved) : [20, 10, 1, 0];
+      return saved ? JSON.parse(saved) : INITIAL_KDV;
     } catch {
-      return [20, 10, 1, 0];
+      return INITIAL_KDV;
     }
   });
   const [isCloudLoading, setIsCloudLoading] = useState<boolean>(true);
@@ -169,10 +234,10 @@ export default function App() {
         const localCats = localStorage.getItem('b2b_categories_v4');
         const localKdv = localStorage.getItem('b2b_kdv_rates_v4');
 
-        let defaultProducts = [...PRODUCTS];
-        let defaultBrands = [...BRANDS];
-        let defaultCategories = [...CATEGORIES];
-        let defaultKdv = [20, 10, 1, 0];
+        let defaultProducts = [...INITIAL_PRODUCTS];
+        let defaultBrands = [...INITIAL_BRANDS];
+        let defaultCategories = [...INITIAL_CATEGORIES];
+        let defaultKdv = [...INITIAL_KDV];
 
         // 1. Process and merge Server-side custom disk backup data (user_data.json) if it exists
         if (diskData) {
@@ -1085,15 +1150,15 @@ export default function App() {
           saveDiskBackup(products, brands, categories, newKdvRates);
         }}
         onResetToDefaults={() => {
-          setProducts(PRODUCTS);
-          setBrands(BRANDS);
-          setCategories(CATEGORIES);
-          setKdvRates([20, 10, 1, 0]);
-          syncProductsInCloud(PRODUCTS);
-          syncBrandsInCloud(BRANDS);
-          syncCategoriesInCloud(CATEGORIES);
-          syncKdvRatesInCloud([20, 10, 1, 0]);
-          saveDiskBackup(PRODUCTS, BRANDS, CATEGORIES, [20, 10, 1, 0]);
+          setProducts(INITIAL_PRODUCTS);
+          setBrands(INITIAL_BRANDS);
+          setCategories(INITIAL_CATEGORIES);
+          setKdvRates(INITIAL_KDV);
+          syncProductsInCloud(INITIAL_PRODUCTS);
+          syncBrandsInCloud(INITIAL_BRANDS);
+          syncCategoriesInCloud(INITIAL_CATEGORIES);
+          syncKdvRatesInCloud(INITIAL_KDV);
+          saveDiskBackup(INITIAL_PRODUCTS, INITIAL_BRANDS, INITIAL_CATEGORIES, INITIAL_KDV);
         }}
       />
     </div>
