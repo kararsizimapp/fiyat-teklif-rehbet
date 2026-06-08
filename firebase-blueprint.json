@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Sports product metadata and pricing configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the product" },
+        "name": { "type": "string", "description": "Product title" },
+        "brand": { "type": "string", "description": "Brand name associated" },
+        "category": { "type": "string", "description": "Associated category ID" },
+        "collection": { "type": "string", "description": "Product collection style" },
+        "image": { "type": "string", "description": "Main product image URL" },
+        "images": { "type": "array", "description": "Array of slide images, including base64" },
+        "basePrice": { "type": "number", "description": "Base price in Turkish Liras" },
+        "kdvRate": { "type": "number", "description": "VAT rate" },
+        "otvRate": { "type": "number", "description": "Optional luxury tax rate" },
+        "description": { "type": "string", "description": "Product description text" },
+        "rating": { "type": "number", "description": "User star rating" },
+        "stock": { "type": "number", "description": "Product stock amount" },
+        "specs": { "type": "object", "description": "Key-value pair of specifications" },
+        "options": { "type": "array", "description": "Array of customization options" },
+        "branch": { "type": "string", "description": "Sports branch associated with the item" }
+      },
+      "required": ["id", "name", "brand", "category", "basePrice", "kdvRate"]
+    },
+    "Brand": {
+      "title": "Brand",
+      "description": "Sports apparel and equipment brand info",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Brand title" },
+        "logo": { "type": "string", "description": "Brand logo URL" },
+        "origin": { "type": "string", "description": "Country of origin" },
+        "description": { "type": "string", "description": "Short bio or brand tagline" }
+      },
+      "required": ["name", "logo"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Dynamic product categories",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique category identifier" },
+        "name": { "type": "string", "description": "Human readable name" },
+        "iconName": { "type": "string", "description": "Lucide icon identifier name" },
+        "description": { "type": "string", "description": "Description" }
+      },
+      "required": ["id", "name", "iconName"]
+    },
+    "KdvRate": {
+      "title": "KdvRate",
+      "description": "Permitted tax percentage configurations",
+      "type": "object",
+      "properties": {
+        "rate": { "type": "number", "description": "Permitted KDV tax percentage digits" }
+      },
+      "required": ["rate"]
+    },
+    "SheetRow": {
+      "title": "SheetRow",
+      "description": "Production log items",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Internal unique identifier" },
+        "siparisNo": { "type": "string", "description": "Order code number" },
+        "tarih": { "type": "string", "description": "Creation date" },
+        "kulupAdi": { "type": "string", "description": "Customer club or organisation" },
+        "brans": { "type": "string", "description": "Sports branch genre" },
+        "temsilciEmail": { "type": "string", "description": "Representative email in charge" },
+        "temsilciIsim": { "type": "string", "description": "Representative full name" },
+        "detay": { "type": "string", "description": "Summary of products bundle" },
+        "adet": { "type": "number", "description": "Quantity total" },
+        "currentStep": { "type": "number", "description": "Active design-to-delivery step index" },
+        "notlar": { "type": "string", "description": "Administrative notes" }
+      },
+      "required": ["id", "siparisNo", "kulupAdi", "brans", "temsilciEmail", "adet"]
+    },
+    "TrackerNotification": {
+      "title": "TrackerNotification",
+      "description": "Dynamic notifications for real-time production tracking updates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID" },
+        "type": { "type": "string", "description": "Notification type label" },
+        "timestamp": { "type": "string", "description": "Generation timestamp" },
+        "siparisNo": { "type": "string", "description": "Associated code string" },
+        "kulupAdi": { "type": "string", "description": "Associated club description" },
+        "brans": { "type": "string", "description": "Branch description" },
+        "message": { "type": "string", "description": "Visual feed log content" },
+        "temsilciEmail": { "type": "string", "description": "Associated agent in charge" },
+        "isRead": { "type": "boolean", "description": "Read badge status" }
+      },
+      "required": ["id", "message", "timestamp"]
+    }
+  },
+  "firestore": {
+    "products": {
+      "schema": "Product",
+      "description": "Global collection containing standard and custom products metadata"
+    },
+    "brands": {
+      "schema": "Brand",
+      "description": "List of available brands"
+    },
+    "categories": {
+      "schema": "Category",
+      "description": "Sportswear categories menu items"
+    },
+    "kdvRates": {
+      "schema": "KdvRate",
+      "description": "Configured custom list of KDV rate entities"
+    },
+    "sheetRows": {
+      "schema": "SheetRow",
+      "description": "Production details tracked by representative agents"
+    },
+    "notifications": {
+      "schema": "TrackerNotification",
+      "description": "Production update feed alerts"
+    }
+  }
+}

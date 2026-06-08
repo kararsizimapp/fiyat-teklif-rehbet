@@ -1,0 +1,6 @@
+{
+  "name": "Ürün Fiyat Listesi ve Hesaplama Aracı",
+  "description": "Marka ve kategori bazlı detaylı ürün fiyat listesi ve özelleştirilebilir fiyat hesaplama simülatörü.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

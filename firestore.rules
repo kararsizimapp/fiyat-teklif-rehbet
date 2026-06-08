@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Products Collection Rules
+    match /products/{productId} {
+      allow read, write: if true;
+    }
+
+    // Brands Collection Rules
+    match /brands/{brandId} {
+      allow read, write: if true;
+    }
+
+    // Categories Collection Rules
+    match /categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    // KdvRates Collection Rules
+    match /kdvRates/{rateId} {
+      allow read, write: if true;
+    }
+
+    // SheetRows (Sipariş Takibi) Rules
+    match /sheetRows/{rowId} {
+      allow read, write: if true;
+    }
+
+    // Notifications Rules
+    match /notifications/{notifId} {
+      allow read, write: if true;
+    }
+  }
+}
