@@ -92,6 +92,16 @@
         "isRead": { "type": "boolean", "description": "Read badge status" }
       },
       "required": ["id", "message", "timestamp"]
+    },
+    "SystemSetting": {
+      "title": "SystemSetting",
+      "description": "App initialization and cloud database state parameters",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique settings key such as 'seeding'" },
+        "isSeeded": { "type": "boolean", "description": "State describing whether or not database first-time seeding succeeded" }
+      },
+      "required": ["id"]
     }
   },
   "firestore": {
@@ -118,6 +128,10 @@
     "notifications": {
       "schema": "TrackerNotification",
       "description": "Production update feed alerts"
+    },
+    "systemSettings": {
+      "schema": "SystemSetting",
+      "description": "Global settings and database sequence state fields"
     }
   }
 }

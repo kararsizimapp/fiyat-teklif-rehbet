@@ -29,7 +29,9 @@ import {
   syncBrandsInCloud, 
   syncCategoriesInCloud, 
   syncKdvRatesInCloud,
-  isCloudQuotaExceeded
+  isCloudQuotaExceeded,
+  checkIsSeeded,
+  markAsSeeded
 } from './firebase';
 
 const getUniqueProducts = (arr: Product[]): Product[] => {
@@ -303,8 +305,10 @@ export default function App() {
         setCategories(defaultCategories);
         setKdvRates(defaultKdv);
 
-        // 4. Fetch from Firebase Firestore as the ultimate shared authority
+        // 4. Check if catalog was ever seeded in the past
+        const isSeededInCloud = await checkIsSeeded();
         const dbProducts = await fetchProducts();
+
         if (dbProducts === null) {
           console.warn("Firestore system is in quota exceeded or local fallback state. Skipping database seeding.");
         } else if (dbProducts.length > 0) {
@@ -312,6 +316,10 @@ export default function App() {
           setProducts(dbProducts);
           localStorage.setItem('b2b_products_v5', JSON.stringify(dbProducts));
           
+          if (!isSeededInCloud) {
+            await markAsSeeded();
+          }
+
           const dbBrands = await fetchBrands();
           if (dbBrands && dbBrands.length > 0) {
             setBrands(dbBrands);
@@ -348,13 +356,46 @@ export default function App() {
             dbKdv && dbKdv.length > 0 ? dbKdv : defaultKdv
           );
         } else {
-          // Firestore is blank/new, seed with local defaults
-          console.log("Firestore catalog is blank, seeding initial catalog defaults under custom backup...");
-          await syncProductsInCloud(defaultProducts);
-          await syncBrandsInCloud(defaultBrands);
-          await syncCategoriesInCloud(defaultCategories);
-          await syncKdvRatesInCloud(defaultKdv);
-          await saveDiskBackup(defaultProducts, defaultBrands, defaultCategories, defaultKdv);
+          if (!isSeededInCloud) {
+            // Firestore is completely fresh and was never initialized - seed with local defaults!
+            console.log("Firestore catalog is blank, seeding initial catalog defaults under custom backup...");
+            await syncProductsInCloud(defaultProducts);
+            await syncBrandsInCloud(defaultBrands);
+            await syncCategoriesInCloud(defaultCategories);
+            await syncKdvRatesInCloud(defaultKdv);
+            await markAsSeeded();
+            await saveDiskBackup(defaultProducts, defaultBrands, defaultCategories, defaultKdv);
+            
+            setProducts(defaultProducts);
+            localStorage.setItem('b2b_products_v5', JSON.stringify(defaultProducts));
+          } else {
+            // Database has been initialized in the past, but is currently EMPTY of products (user intentionally cleared them).
+            // Respect the user's intent: do NOT automatically restore the base templates. Leave the list blank!
+            console.log("Firestore catalog was previously seeded, but is now empty of products. Respecting user cleared list.");
+            
+            setProducts([]);
+            localStorage.setItem('b2b_products_v5', JSON.stringify([]));
+            
+            // Still sync brands, categories, and KDV rates
+            const dbBrands = await fetchBrands();
+            if (dbBrands && dbBrands.length > 0) {
+              setBrands(dbBrands);
+              localStorage.setItem('b2b_brands_v5', JSON.stringify(dbBrands));
+            }
+            const dbCategories = await fetchCategories();
+            if (dbCategories && dbCategories.length > 0) {
+              setCategories(dbCategories);
+              localStorage.setItem('b2b_categories_v5', JSON.stringify(dbCategories));
+            }
+            const dbKdv = await fetchKdvRates();
+            if (dbKdv && dbKdv.length > 0) {
+              const sortedKdv = dbKdv.sort((a, b) => b - a);
+              setKdvRates(sortedKdv);
+              localStorage.setItem('b2b_kdv_rates_v5', JSON.stringify(sortedKdv));
+            }
+            
+            await saveDiskBackup([], brands, categories, kdvRates);
+          }
         }
       } catch (err) {
         console.error("Failed to load/seed cloud catalog data:", err);

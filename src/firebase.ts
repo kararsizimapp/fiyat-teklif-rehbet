@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously } from 'firebase/auth';
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { Product, BrandInfo, CategoryInfo } from './types';
 
@@ -144,6 +144,33 @@ export const fetchKdvRates = async (): Promise<number[] | null> => {
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, 'kdvRates');
     return isCloudQuotaExceeded ? null : [];
+  }
+};
+
+// Check if database was seeded in the past
+export const checkIsSeeded = async (): Promise<boolean> => {
+  if (isCloudQuotaExceeded) return true; // Pretend it's seeded if offline to avoid re-seeding loops
+  try {
+    const docRef = doc(db, 'systemSettings', 'seeding');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return !!data?.isSeeded;
+    }
+    return false;
+  } catch (e) {
+    handleFirestoreError(e, OperationType.GET, 'systemSettings/seeding');
+    return true; // Safe fallback on permission-denied or error
+  }
+};
+
+// Mark database as seeded in the cloud
+export const markAsSeeded = async () => {
+  if (isCloudQuotaExceeded) return;
+  try {
+    await setDoc(doc(db, 'systemSettings', 'seeding'), { id: 'seeding', isSeeded: true });
+  } catch (e) {
+    handleFirestoreError(e, OperationType.WRITE, 'systemSettings/seeding');
   }
 };
 

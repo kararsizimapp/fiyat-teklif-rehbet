@@ -30,5 +30,10 @@ service cloud.firestore {
     match /notifications/{notifId} {
       allow read, write: if true;
     }
+
+    // System Settings Rules (Initialization state tracking)
+    match /systemSettings/{settingId} {
+      allow read, write: if true;
+    }
   }
 }
